@@ -83,6 +83,8 @@ if (!file.exists("data_input/hmd_dts_pop.rds")) {
   hmd_us <- Sys.getenv("hmd_us")
   hmd_pw <- Sys.getenv("hmd_pw")
   
+  
+  cat("Downloading deaths and exposures from HMD\n")
   cds_hmd <- getHMDcountries() %>% pull(CNTRY)
   
   hmd <- tibble()
@@ -151,6 +153,8 @@ if (!file.exists("data_input/hfd_asfr.rds")) {
   # excluding them for now
   cts_issues <- c("BGR", "CAN", "POL", "KOR", "RUS", "CHE")
   
+  cat("Downloading ASFR from HFD\n")
+  
   cds_hfd <- 
     getHFDcountries() %>% 
     filter(!CNTRY %in% cts_issues) %>% 
@@ -181,33 +185,35 @@ if (!file.exists("data_input/hfd_asfr.rds")) {
   
 }
 
-if (!file.exists("data_input/hfd_parity.rds")) {
-  
-  cts_par <- c("ESP", "SWE", "JPN", "ITA", "DEUTE", "DEUTW")
-  
-  hfd_par <- tibble()
-  for(ct in cts_par){
-    cat(paste0(ct, "\n"))
-    
-    chunk_p <- 
-      readHFDweb(ct, "asfrRRbo", hmd_us, hmd_pw) %>%
-      as_tibble() %>%
-      mutate(Code = ct)
-    
-    hfd_par <- 
-      hfd_par %>%
-      bind_rows(chunk_p) %>% 
-      unique()
-  }
-  hfd_par
-  
-  hfd_par2 <- 
-    hfd_par %>% 
-    select(-OpenInterval)
-  
-  write_rds(hfd_par2, "data_input/hfd_parity.rds")
-  
-}
+# # parity data
+# # ~~~~~~~~~~~
+# if (!file.exists("data_input/hfd_parity.rds")) {
+#   
+#   cts_par <- c("ESP", "SWE", "JPN", "ITA", "DEUTE", "DEUTW")
+#   
+#   hfd_par <- tibble()
+#   for(ct in cts_par){
+#     cat(paste0(ct, "\n"))
+#     
+#     chunk_p <- 
+#       readHFDweb(ct, "asfrRRbo", hmd_us, hmd_pw) %>%
+#       as_tibble() %>%
+#       mutate(Code = ct)
+#     
+#     hfd_par <- 
+#       hfd_par %>%
+#       bind_rows(chunk_p) %>% 
+#       unique()
+#   }
+#   hfd_par
+#   
+#   hfd_par2 <- 
+#     hfd_par %>% 
+#     select(-OpenInterval)
+#   
+#   write_rds(hfd_par2, "data_input/hfd_parity.rds")
+#   
+# }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # redefining the Lexis shape specs ====

@@ -49,7 +49,9 @@ scale1
 # at different ages, proportional changes, and ratios, among others...
 hmd <- read_rds("data_input/hmd_dts_pop.rds")
 head(hmd)
+unique(hmd$code)
 
+# Selecting Spain
 ct <- "ESP"
 
 dt <- 
@@ -267,7 +269,7 @@ dt2 %>%
                      # breaks = brks, labels = lbls,
                      name = "Mortality\nrate /100k") +
   # contour lines are useful for looking at level changes over time
-  geom_contour(bins = 20, col = "black", size = .15, alpha = 0.8)+
+  geom_contour(bins = 20, col = "black", linewidth = .15, alpha = 0.8)+
   lexis_shape
 
 # you can modify the option parameter for other nice palettes
@@ -279,7 +281,7 @@ dt2 %>%
                      # breaks = brks, labels = lbls,
                      name = "Mortality\nrate /100k") +
   # contour lines are useful for looking at level changes over time
-  geom_contour(bins = 20, col = "black", size = .15, alpha = 0.8)+
+  geom_contour(bins = 20, col = "black", linewidth = .15, alpha = 0.8)+
   lexis_shape
 
 # what about the scales?
@@ -327,8 +329,6 @@ dt2 %>%
                      name = "Mortality\nrate /100k") +
   lexis_shape
 
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -349,6 +349,7 @@ dt
 # Construct a lexis surface of age specific fertility rates ratios 
 # between two countries of your choice with available data for all available 
 # years
+# fertility data, from the HFD, is here:
 asfr <- 
   read_rds("data_input/hfd_asfr.rds") 
 asfr
@@ -368,3 +369,4 @@ unique(asfr$code)
 
 # Is there anything to interpret?
 # Any additional analysis that can be done?
+
