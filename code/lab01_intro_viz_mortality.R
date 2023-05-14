@@ -75,7 +75,8 @@ mxs <-
 
 mxs
 
-# log scale in the y axis
+# log scale in the y axis when plotting death rates by age
+# as we know increase is exponential with age
 dt %>% 
   filter(year %in% 2015:2020) %>% 
   ggplot()+
@@ -259,8 +260,6 @@ dt2 %>%
 
 # lets add a nice scale color, package viridis has some nice options
 # https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html
-library(viridis)
-
 dt2 %>%
   ggplot(aes(x = year, y = age, z = mx))+
   geom_tile(aes(fill = mx))+
