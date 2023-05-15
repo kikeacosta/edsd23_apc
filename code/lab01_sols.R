@@ -1,5 +1,52 @@
+# EDSD 2023
+# course in analysis of mortality disturbances 
+# Instructor: Enrique Acosta (CED)
+# Lab 1: Introduction to mortality visualization
+# Possible solutions to the proposed assignment 
+
 rm(list=ls())
 source("code/lab00_prep_session.R")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+# Assignment in class: ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Option 1.
+# ~~~~~~~~~
+# Construct a lexis surface of the sex ratio of mortality in a country of 
+# your choice between 1900 and 2000
+dt
+
+# Option 2.
+# ~~~~~~~~~
+# Construct a lexis surface of age specific fertility rates ratios 
+# between two countries of your choice with available data for all available 
+# years
+# fertility data, from the HFD, is here:
+asfr <- 
+  read_rds("data_input/hfd_asfr.rds") 
+asfr
+unique(asfr$code)
+
+
+# in both cases:
+# ~~~~~~~~~~~~~~
+# use the appropriate scales, labels, and colors that allows an easy and proper
+# interpretation of the ratios
+
+# add contour lines to distinguish the direction of the ratios
+# what kind of color scale is the most appropriate? 
+# build a color scale if there is no a good one available
+
+# add cohort labels to the Lexis surface
+
+# Is there anything to interpret?
+
+
+
+# Option 1. ====
+# ~~~~~~~~~~~~~~
+
 hmd <- read_rds("data_input/hmd_dts_pop.rds")
 head(hmd)
 
@@ -140,6 +187,10 @@ sexr3 %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Option 2. ====
+# ~~~~~~~~~~~~~~
 
 # plotting fertility rates ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
