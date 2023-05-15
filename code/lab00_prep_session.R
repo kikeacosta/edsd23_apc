@@ -23,12 +23,12 @@ for (i in libs){
 }
 options(timeout = 600)
 if (!("MortalitySmooth" %in% rownames(installed.packages()))) remotes::install_github("timriffe/MortalitySmooth")
-if (!("wpp2022" %in% rownames(installed.packages()))) remotes::install_github("PPgp/wpp2022", force = TRUE)
+# if (!("wpp2022" %in% rownames(installed.packages()))) remotes::install_github("PPgp/wpp2022", force = TRUE)
 
 # Loading required packages 
 lapply(libs, require, character.only = T)
 library("MortalitySmooth")
-library("wpp2022")
+# library("wpp2022")
 
 # avoiding scientific notation
 options(scipen=999)
@@ -139,6 +139,88 @@ if (!file.exists("data_input/hmd_dts_pop.rds")) {
 # New Zealand Maories and non Maories 
 # Germany East and West
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Deaths and exposures from the full HMD ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if (!file.exists("data_input/hmd_dts_pop_vcomplement.rds")) {
+  
+  dts_files <- 
+    list.files("data_input/Deaths_1x1") %>% 
+    as_tibble() %>% 
+    filter(str_detect(value, "GBR_SCO|DEUTE|DEUTW|NZL_MA|NZL_NM")) %>% 
+    pull(value)
+
+  pop_files <- 
+    list.files("data_input/Exposures_1x1") %>% 
+    as_tibble() %>% 
+    filter(str_detect(value, "GBR_SCO|DEUTE|DEUTW|NZL_MA|NZL_NM")) %>% 
+    pull(value)
+  
+  # loading deaths from all countries in HMD
+  db_d <- tibble()
+  for(i in 1:length(dts_files)){
+    
+    txt_file <- dts_files[i]
+    
+    print(txt_file)
+    
+    temp <- 
+      read_tsv(paste0("data_input/Deaths_1x1/", txt_file),
+               skip = 1) %>%
+      rename(var =1) %>% 
+      mutate(var = str_replace_all(var, "\\.", "")) %>% 
+      separate(1, c("year", "age", "female", "male", "total")) %>% 
+      mutate(code = str_replace(txt_file, ".Deaths_1x1.txt", ""))
+    
+    db_d <- db_d %>% 
+      bind_rows(temp)
+  }
+  
+  # loading exposures from all countries in HMD
+  db_p <- tibble()
+  for(i in 1:length(pop_files)){
+    
+    txt_file <- pop_files[i]
+    
+    print(txt_file)
+    
+    temp <- 
+      read_tsv(paste0("data_input/Exposures_1x1/", txt_file),
+               skip = 1) %>%
+      rename(var =1) %>% 
+      mutate(var = str_replace_all(var, "\\.", "")) %>% 
+      separate(1, c("year", "age", "female", "male", "total")) %>% 
+      mutate(code = str_replace(txt_file, ".Exposures_1x1.txt", ""))
+    
+    db_p <- db_p %>% 
+      bind_rows(temp)
+  }
+  
+  db_d2 <- 
+    db_d %>% 
+    gather(male, female, total, key = sex, value = dts) %>% 
+    left_join(db_p %>% 
+                gather(male, female, total, key = sex, value = pop)) %>% 
+    mutate(dts = dts %>% as.double(),
+           pop = pop %>% as.double(),
+           age = age %>% as.integer(),
+           year = year %>% as.integer())
+  
+  write_rds(db_d2, "data_input/hmd_dts_pop_vcomplement.rds")
+}
+
+if (!file.exists("data_input/hmd_dts_pop_v2.rds")) {
+  
+  hmd1 <- read_rds("data_input/hmd_dts_pop.rds")
+  hmd2 <- read_rds("data_input/hmd_dts_pop_vcomplement.rds")
+    
+  out <-  
+    bind_rows(hmd1, hmd2)
+  
+  write_rds(out, "data_input/hmd_dts_pop_v2.rds")
+  
+}
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Age-specific fertility rates from the HFD ====
@@ -248,14 +330,15 @@ redo_lexis_shape <-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 plot_change <- function(c, s, amin, amax, ymin, ymax){
   # filtering data, and computing rates and log_rates 
-  db2 <- db %>% 
-    mutate(deaths = deaths + 1,
-           Mx = 100000 * deaths / exposure, 
+  db2 <- 
+   hmd %>% 
+    mutate(deaths = dts + 1,
+           Mx = 100000 * dts / pop, 
            log_m = log(Mx)) %>% 
-    filter(country == c,
+    filter(code == c,
            sex == s,
-           age >= amin & age <= amax, 
-           year >= ymin & year <= ymax)
+           age %in% amin:amax, 
+           year %in% ymin:ymax)
   
   amin2 <- db2 %>% pull(age) %>% min()
   amax2 <- db2 %>% pull(age) %>% max()
@@ -267,13 +350,13 @@ plot_change <- function(c, s, amin, amax, ymin, ymax){
   
   # mortality
   deaths <- 
-    matrix(db2$deaths, nrow = length(alist), ncol = length(ylist), byrow = F)
+    matrix(db2$dts, nrow = length(alist), ncol = length(ylist), byrow = F)
   colnames(deaths) <- ylist
   rownames(deaths) <- alist
   
   # population at risk (population/exposure)
   exposure <- 
-    matrix(db2$exposure, nrow = length(alist), ncol = length(ylist), byrow=F)
+    matrix(db2$pop, nrow = length(alist), ncol = length(ylist), byrow=F)
   colnames(exposure) <- ylist
   rownames(exposure) <- alist
   
@@ -288,12 +371,10 @@ plot_change <- function(c, s, amin, amax, ymin, ymax){
   # from matrix to tidy form (adjusting ages to start in 0)
   smt <- 
     mx_smooth %>% 
-    as_tibble() %>% 
-    rownames_to_column() %>% 
-    rename(age = rowname) %>% 
+    as_tibble(rownames = "age") %>%
     gather(-age, key = year, value = Mx) %>% 
     mutate(type = "m_smoothed",
-           age = as.integer(age) - 1 + amin2,
+           age = as.integer(age),
            year = as.integer(year))
   
   # replacing missing values and estimating log_rates (/100k)

@@ -8,7 +8,7 @@ source("code/lab00_prep_session.R")
 
 # load data on deaths and exposures from the HMD
 # (already downloaded all available information, see lab00 script)
-hmd <- read_rds("data_input/hmd_dts_pop.rds")
+hmd <- read_rds("data_input/hmd_dts_pop_v2.rds")
 unique(hmd$code)
 
 # Lets select a group
@@ -106,12 +106,12 @@ fit_1d_bic$logmortality[,1]
 dts2 <- 
   dt %>% 
   filter(year == 1938) %>% 
-  mutate(mx_bic = 1e5*exp(fit_1d_bic$logmortality[,1]))
+  mutate(mx_sm_bic = 1e5*exp(fit_1d_bic$logmortality[,1]))
 
 dts2 %>% 
   ggplot()+
   geom_point(aes(age, mx))+
-  geom_line(aes(age, mx_bic))+
+  geom_line(aes(age, mx_sm_bic))+
   pmort_pref
 
 # could we play with the penalization of the spline?
@@ -189,7 +189,7 @@ fit_1d <-
                # accounting for overdispersion
                overdispersion = TRUE, 
                # using AIC
-               method = 1)
+               method = 2)
 
 cw2 <-
   cw %>% 
@@ -208,6 +208,7 @@ cw2 %>%
 # could we construct a counterfactual scenario of mortality without the civil war? 
 # removing the period 1935-1944 for interpolation
 
+# weights for those years as 0's
 ws <- 
   cw %>% 
   select(year) %>% 
@@ -220,8 +221,9 @@ fit_1d_i <-
                w = ws,
                offset = log(pop_cw), 
                overdispersion = TRUE, 
-               method = 1)
+               method = 2)
 
+# extracting estimates
 cw3 <- 
   cw2 %>% 
   mutate(mx_sm_i = 1e5*exp(fit_1d_i$logmortality[,1])) %>% 
@@ -234,6 +236,17 @@ cw3 %>%
   scale_y_log10()+
   theme_bw()+
   geom_vline(xintercept = c(1935, 1944), linetype = "dashed")
+
+
+# quick excess deaths calculation?
+cw3 %>% 
+  spread(type, mx) %>% 
+  # subtracting actual - interpolated (counterfactual) 
+  mutate(mx_exc = mx - mx_sm_i) %>% 
+  filter(year %in% 1936:1942) %>% 
+  left_join(cw %>% select(year, pop)) %>% 
+  mutate(exc = mx_exc*pop/1e5) %>% 
+  summarise(exc = sum(exc))
 
 
 
@@ -348,7 +361,7 @@ comp <-
   left_join(smt %>% select(-type) %>% select(year, age, log_mx_sm = log_mx))
 
 # in different years
-yrs <- c(1960, 1980, 2000, 2010)
+yrs <- c(1920, 1940, 1960, 1980, 2000, 2010)
 comp %>% 
   filter(year %in% yrs) %>% 
   ggplot()+
@@ -378,175 +391,9 @@ comp %>%
   theme_bw()
 
 
-
-# we can have a quick estimation of the excess mortality from the civil war
+# Interpolation in two dimensions? yes, it is possible!!
 # same principle of interpolation, but the weights are also a matrix
-cw_dt <- 
-  dt %>% 
-  filter(year %in% 1920:1960)
-
-# Again, we need to give the information in matrix forms (age x period)
-ylist_cw <- unique(cw_dt$year) %>% sort() # all periods in data, ordered
-alist_cw <- unique(cw_dt$age) %>% sort() # all ages in data, ordered
-
-# mortality matrix
-deaths <- 
-  matrix(cw_dt$dts, 
-         nrow = length(alist_cw), 
-         ncol = length(ylist_cw), 
-         byrow = F)
-colnames(deaths) <- ylist_cw
-rownames(deaths) <- alist_cw
-
-# lets have a look of the deaths matrix 
-deaths
-
-# population at risk (population/exposure) matrix
-exposure <- 
-  matrix(cw_dt$pop, 
-         nrow = length(alist_cw),
-         ncol = length(ylist_cw), 
-         byrow = F)
-colnames(exposure) <- ylist_cw
-rownames(exposure) <- alist_cw
-
-ws_m <- 
-  cw_dt %>% 
-  mutate(w = ifelse(year %in% 1935:1944, 0, 1))
-
-ws <- 
-  matrix(ws_m$w, 
-         nrow = length(alist_cw),
-         ncol = length(ylist_cw), 
-         byrow = F)
-colnames(ws) <- ylist_cw
-rownames(ws) <- alist_cw
-
-fit_2d_int <- 
-  Mort2Dsmooth(x = alist_cw, 
-               y = ylist_cw, 
-               Z = deaths, 
-               W = ws,
-               offset = log(exposure),
-               overdispersion = TRUE, 
-               method = 2)
-
-# extracting and transforming estimates
-fit_2d_int$logmortality
-# what units are these?
-
-# from matrix to tidy (long) form
-smt_int <- 
-  (exp(fit_2d_int$logmortality) * 1e5) %>% 
-  # keeping the row names as age values
-  as_tibble(rownames = "age") %>%
-  mutate(age = age %>% as.double()) %>% 
-  # reshaping to long form (tidy)
-  gather(-age, key = year, value = mx) %>% 
-  mutate(type = "m_smoothed",
-         year = as.integer(year)) %>% 
-  # replacing missing values and estimating log_rates (/100k)
-  replace_na(list(mx = 0)) %>% 
-  mutate(log_mx = log(mx))
-
-# quick look
-redo_lexis_shape(pmin = 1920,
-                 pmax = 1960,
-                 amin = 0,
-                 amax = 100)
-p_cw <- 
-  cw_dt %>%
-  ggplot(aes(x = year, y = age, z = log_mx))+
-  geom_tile(aes(fill = log_mx)) +
-  scale_fill_viridis(option = "C", discrete = F,  direction = -1, 
-                     name = "Mortality\nrate /100k", 
-                     breaks = brks, labels = lbls) +
-  geom_contour(bins = 30, col="black", size=.15, alpha=0.8)+
-  lexis_shape
-
-p_sm_i <- 
-  smt_int %>%
-  ggplot(aes(x = year, y = age, z = log_mx))+
-  geom_tile(aes(fill = log_mx)) +
-  scale_fill_viridis(option = "C", discrete = F,  direction = -1, 
-                     name = "Mortality\nrate /100k", 
-                     breaks = brks, labels = lbls) +
-  geom_contour(bins = 30, col="black", size=.15, alpha=0.8)+
-  lexis_shape
-
-p_cw + p_sm_i
-
-exc_cw <- 
-  cw_dt %>% 
-  left_join(smt_int %>% 
-              select(age, year, mx_int = mx, log_mx_int = log_mx)) %>% 
-  mutate(exc = mx/mx_int)
-
-exc_cw %>%
-  ggplot(aes(x = year, y = age, z = exc))+
-  geom_tile(aes(fill = exc)) +
-  scale_fill_viridis(option = "C", discrete = F,  direction = -1, 
-                     name = "Mortality\nrate /100k") +
-  lexis_shape
-
-# at different ages
-ags <- c(0, 10, 50, 60, 80)
-exc_cw %>% 
-  filter(age %in% ags) %>% 
-  ggplot()+
-  # scatter plot of observed mortality 
-  geom_point(aes(year, log_mx, col = factor(age), group = age),
-             size = 1, alpha = 0.7)+
-  # line of smoothed mortality
-  geom_line(aes(year, log_mx_int, col = factor(age), group = age))+
-  scale_x_continuous(expand = c(0,0), breaks = seq(pmin, pmax, 10)) +
-  scale_y_continuous(expand = c(0,0))+
-  labs(x = "Period", y = "Death Rates (Log)")+
-  theme_bw()
-
-
-smt_int_fit <- 
-  predict(fit_2d_int, se.fit = TRUE)$fit %>% 
-  as_tibble(rownames = "age") %>%
-  # reshaping to long form (tidy)
-  gather(-age, key = year, value = log_mx) %>% 
-  mutate(type = "m_smoothed",
-         year = as.integer(year)) %>% 
-  # replacing missing values and estimating log_rates (/100k)
-  replace_na(list(log_mx = 0))
-
-smt_int_se <- 
-  predict(fit_2d_int, se.fit = TRUE)$se.fit %>% 
-  as_tibble(rownames = "age") %>%
-  # reshaping to long form (tidy)
-  gather(-age, key = year, value = se) %>% 
-  mutate(type = "m_smoothed",
-         year = as.integer(year)) %>% 
-  # replacing missing values and estimating log_rates (/100k)
-  replace_na(list(se = 0))
-
-smt_int_ci <- 
-  smt_int_fit %>% 
-  left_join(smt_int_se) %>% 
-  mutate(mx_int = exp(log_mx)*1e5,
-         ll = exp(log_mx-1.96*se)*1e5,
-         ul = exp(log_mx+1.96*se)*1e5,
-         age = age %>% as.integer()) %>% 
-  select(age, year, mx_int, ll, ul)
-
-fit_2d_int
-
-exc_cw <- 
-  cw_dt %>% 
-  left_join(smt_int_ci) %>% 
-  mutate(exc = ifelse(dts > ul, mx/mx_int, 0))
-
-exc_cw %>%
-  ggplot(aes(x = year, y = age, z = exc))+
-  geom_tile(aes(fill = exc)) +
-  scale_fill_viridis(option = "C", discrete = F,  direction = -1, 
-                     name = "Mortality\nrate /100k") +
-  lexis_shape
+# maybe too long for today. I will add an example
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -560,7 +407,7 @@ exc_cw %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Percentage of mortality change within the same age ((year t)/(year t-1) - 1) * 100
 db_per <- 
-  smt2 %>% 
+  smt %>% 
   group_by(age) %>% 
   mutate(ch = ((mx / lag(mx)) - 1) * 100,
          ch2 = mx/lag(mx)) %>% 
@@ -654,7 +501,7 @@ db_per2 %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Percentage of mortality change within the same period ((age x)/(age x-1) - 1) * 100
 db_age <- 
-  smt2 %>% 
+  smt %>% 
   group_by(year) %>% 
   mutate(ch = ((mx / lag(mx)) - 1) * 100) %>% 
   ungroup() %>% 
@@ -703,6 +550,24 @@ db_age2 %>%
   lexis_shape
 
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# I summarized all steps for producing a Lexis surface of mortality 
+# change in a function called "plot_change()". You can find it in the 
+# "00_preparing_r_session.r" script.
+
+# One just have to select a country, the sex, age and period limits
+
+# list of countries
+unique(hmd$code)
+
+# example, let's see changes in US female mortality since 1950
+plot_change("FRATNP", "female", 0, 80, 1950, 2020)
+# what can we see here?
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
 # Assignment in class: ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -710,7 +575,9 @@ db_age2 %>%
 # Let's have a look at the mortality trends in different populations within the 
 # same country (HMD countries).
 # Group exercise:
-# 1) Build a Lexis surface of mortality change for each of the following groups 
+# 1) Build a Lexis surface of mortality change for each of the following 
+# populations, between ages 10-80, since the 1950s until the most recent date 
+# you consider a good idea to include
 # 2) Identify the presence of period or cohort effects in each group
 # 3) Discuss which possible mechanisms could have caused the observed disturbances 
 # in mortality, and the differences between both populations. You can have a quick 
@@ -732,4 +599,5 @@ db_age2 %>%
 # USA (females vs males)
 
 # Group 5
-# Spain (females vs males)
+# Scotland (females vs males)
+
