@@ -478,7 +478,6 @@ acp_c <-
 plot_carst(acp_c)
 
 
-
 # the function is very versatile and has many ways to parameterize
 # for instance, not grouping ages and periods, 
 
@@ -490,18 +489,19 @@ dt_carst_x1 <-
          A = age,
          P = year)
 
+# adding all the drift to the cohort dimension
 acp_factor <- 
   apc.fit(dt_carst_x1, 
           model = "factor", 
           npar = c(A=15, P=10, C=15),
           dr.extr = "Y", 
-          parm = "AdCP", 
+          parm = "ACP", 
           scale = 10^5)
 
 plot_carst(acp_factor)
 
 # we can fit splines for the nonlinear effects instead of categorical variables 
-# smoothed effects, more convenient for analysis of the trend
+# smoothed effects, more convenient for analyses of changes in the trend
 acp_splines <- 
   apc.fit(dt_carst_x1, 
           model = "bs", 
@@ -519,10 +519,13 @@ plot_carst(acp_splines)
 # Assignment in class: ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Compare the age-period-cohort effects by sex in a country of choice
-# what is the drift? how to interpret it?
-# what is the cohort having the worst outcome of all? what is the reference 
+# work in the same groups as yesterday, and estimate and compare the 
+# age-period-cohort effects of the same populations you analyzed yesterday and
+# answer the following questions: 
+# 1. how consistent are APC estimates with your interpretation from yesterday?
+# 2. what is the drift? how to interpret it?
+# 3. what is the cohort having the worst outcome of all? what is the reference 
 # for this comparison?
-# how is mortality changing? are secular mortality changes being driven 
+# 4. how is mortality changing? are secular mortality changes being driven 
 # by period- or cohort-based changes?
 
