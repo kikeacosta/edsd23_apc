@@ -97,7 +97,7 @@ fit_1d_bic <-
                # accounting for overdispersion (in Poisson context, this is the 
                # case when the variance is larger than the average)
                overdispersion = TRUE, 
-               # using AIC
+               # using BIC
                method = 1)
 
 # extracting the smoothed log rates 
@@ -496,6 +496,10 @@ db_per2 %>%
   #adding contour lines when the slope is 0
   geom_contour(aes(z = ch), breaks = 0, col="black", alpha=.7, size=.3)+ 
   lexis_shape
+
+# ggsave("test_bic.pdf",
+#        w = 10,
+#        h = 10)
 
 # mortality change over age
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
