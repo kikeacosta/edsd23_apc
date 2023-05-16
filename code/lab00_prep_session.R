@@ -465,6 +465,116 @@ plot_change <- function(c, s, amin, amax, ymin, ymax){
 }
 
 
+# extracting coefficients from an APC model
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+extract_coeffs <- function(mod){
+  tp1 <- 
+    coef(summary(mod)) %>% 
+    as_tibble(rownames = "coeff") %>% 
+    mutate(tdim = case_when(str_detect(coeff, "\\(A\\)") ~ "Age",
+                            str_detect(coeff, "\\(P\\)") ~ "Period",
+                            str_detect(coeff, "\\(C\\)") ~ "Cohort",
+                            str_detect(coeff, "I\\(C") ~ "Drift",
+                            str_detect(coeff, "I\\(P") ~ "Drift"),
+           effect = exp(Estimate),
+           ll = exp(Estimate - 1.96*`Std. Error`),
+           ul = exp(Estimate + 1.96*`Std. Error`)) %>% 
+    separate(coeff, c("trash", "value"), sep = "\\)") %>% 
+    mutate(value = value %>% as.double()) %>% 
+    select(tdim, value, effect, ll, ul)
+  
+  ps_model <- tp1 %>% filter(tdim == "Period") %>% pull(value)
+  ps_data <- unique(dt2$P)
+  ps_miss <- ps_data[!(ps_data %in% ps_model)]
+  
+  cs_model <- tp1 %>% filter(tdim == "Cohort") %>% pull(value)
+  cs_data <- unique(dt2$C)
+  cs_miss <- cs_data[!(cs_data %in% cs_model)]
+  
+  tp2 <- 
+    tp1 %>% 
+    bind_rows(tibble(tdim = "Period", value = ps_miss, effect = 1, ll = 1, ul = 1),
+              tibble(tdim = "Cohort", value = cs_miss, effect = 1, ll = 1, ul = 1)) %>% 
+    mutate(tdim = factor(tdim, levels = c("Age", "Period", "Cohort"))) %>% 
+    arrange(tdim, value) %>% 
+    filter(tdim != "Drift")
+  
+  drift <- 
+    tp1 %>% 
+    filter(tdim == "Drift") %>% pull(effect)
+  
+  out <- 
+    list("coeffs" = tp2, "drift" = drift)
+  return(out)
+}
+
+# extracting the drift from an APC model
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+get_drift <- 
+  function(mdl){
+  
+  pcoeff <- 
+    coef(summary(mdl))[,1] %>%
+    as_tibble(rownames = "coeff") %>%
+    filter(coeff %in% c("P", "C")) %>%
+    pull(value)
+  
+  # this is in log scale, let's transform it in percentage value
+  # change of mortality between periods (%)
+  drift <- (exp(pcoeff) - 1)*100
+  drift
+  
+  # interpretation
+  cat(paste0(round(drift, 3),
+             "% change in mortality each period/cohort category"))
+}
 
 
-
+# plotting Carstensen APC model
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+plot_carst <- 
+  function(mod){
+    
+    age_eff <- 
+      mod$Age %>% 
+      as_tibble() %>% 
+      mutate(dim = "Age")
+    
+    per_eff <- 
+      mod$Per %>% 
+      as_tibble() %>% 
+      rename(Year = 1,
+             RR = 2) %>% 
+      mutate(dim = "Period")
+    
+    coh_eff <- 
+      mod$Coh %>% 
+      as_tibble() %>% 
+      rename(Year = 1,
+             RR = 2) %>% 
+      mutate(dim = "Cohort")
+    
+    bind_rows(coh_eff, per_eff)
+    
+    p_a_eff <- 
+      age_eff %>% 
+      ggplot()+
+      geom_line(aes(Age, Rate))+
+      scale_y_log10()+
+      facet_wrap(~dim, scales = "free_x")+
+      theme_bw()
+    
+    p_pc_eff <- 
+      bind_rows(coh_eff, per_eff) %>% 
+      mutate(dim = factor(dim, levels = c("Period", "Cohort"))) %>% 
+      ggplot()+
+      geom_ribbon(aes(Year, ymin = `2.5%`, ymax = `97.5%`), alpha = 0.3)+
+      geom_line(aes(Year, RR))+
+      scale_y_log10(breaks = c(0.2, 0.5, 0.7, 0.8, 1, 1.2, 1.5, 2, 4, 5))+
+      theme_bw()+
+      facet_grid(~dim, scales = "free_x", space = "free_x")+
+      geom_hline(yintercept = 1, linetype = "dashed")
+    
+    p_a_eff+p_pc_eff+ 
+      plot_layout(widths = c(1, 2.5))
+  }
