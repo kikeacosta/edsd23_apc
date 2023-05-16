@@ -36,7 +36,6 @@ brewer.pal(5, "Set3")
 # ~~~~~~~~~~~~~~~~~~~~~
 col1 <- "#0019FF"
 col2 <- "#FF0000"
-
 qt <- 5
 
 scale1 <- colorRampPalette(c(col1, col2), space = "Lab")(qt)
@@ -326,6 +325,7 @@ dt2 %>%
   scale_fill_viridis(option = "C", discrete = F,  direction = -1, 
                      breaks = brks, labels = lbls,
                      name = "Mortality\nrate /100k") +
+  geom_contour(bins = 20, col = "black", size = .15, alpha = 0.8)+
   lexis_shape
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -23,12 +23,12 @@ for (i in libs){
 }
 options(timeout = 600)
 if (!("MortalitySmooth" %in% rownames(installed.packages()))) remotes::install_github("timriffe/MortalitySmooth")
-if (!("wpp2022" %in% rownames(installed.packages()))) remotes::install_github("PPgp/wpp2022", force = TRUE)
+# if (!("wpp2022" %in% rownames(installed.packages()))) remotes::install_github("PPgp/wpp2022", force = TRUE)
 
 # Loading required packages 
 lapply(libs, require, character.only = T)
 library("MortalitySmooth")
-library("wpp2022")
+# library("wpp2022")
 
 # avoiding scientific notation
 options(scipen=999)
