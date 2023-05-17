@@ -7,14 +7,15 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 libs <- c("devtools",
           "tidyverse", 
+          "lubridate",
           "remotes",
           "readr",
-          "haven", 
-          "viridisLite", 
+          "viridisLite",
           "viridis", 
           "mgcv",
           "HMDHFDplus",
           "ISOweek",
+          "countrycode",
           "patchwork",
           "RColorBrewer")
 
@@ -59,7 +60,10 @@ if (!file.exists("data_input/wpp2022_pop.rds")) {
   
   pop <- 
     bind_rows(pop_hist, pop_proj) %>% 
-    arrange(name, year)
+    arrange(name, year) %>% 
+    mutate(code = countrycode(name, origin = "country.name",
+                              destination = "iso3c")) %>% 
+    drop_na(code)
   
   # write_rds(pop, "data_input/total_annual_population_all_countries.rds")
   write_rds(pop, "data_input/wpp2022_pop.rds")
@@ -219,6 +223,18 @@ if (!file.exists("data_input/hmd_dts_pop_v2.rds")) {
   
   write_rds(out, "data_input/hmd_dts_pop_v2.rds")
   
+}
+
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# weekly mortality from the STMF ====
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+if (!file.exists("data_input/STMFinput.zip")) {
+  download.file("https://www.mortality.org/File/GetDocument/Public/STMF/Inputs/STMFinput.zip",
+                "data_input/STMFinput.zip")
 }
 
 
