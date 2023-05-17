@@ -28,14 +28,7 @@ zip_files
 cd <- "ESP"
 sx <- "b"
 ag <- "TOT"
-ymin <- 2013
-
-# test <-
-#   obtain_excess(cd, sx, ag, ymin)
-# 
-# test[[1]]
-# test[[2]]
-# test[[3]] %>% spread(type, exc)
+ymin <- 2015
 
 file_name <- zip_files %>% filter(str_detect(Name, cd)) %>% pull(Name)
 
@@ -366,7 +359,6 @@ yr_exc %>%
   theme_bw()
 
 
-
 # Looking at the three years 2020-2022, estimates using averages double 
 # those obtained from the Poisson model!!!
 
@@ -378,14 +370,14 @@ yr_exc %>%
 # the potential bias when using the average approach
 
 excess <- 
-  obtain_excess(cd = "USA", sx = "b", ag = "TOT", ymin = 2013)
+  obtain_excess(cd = "USA", sx = "b", ag = "TOT", ymin = 2015)
 
 excess[[1]]
 excess[[2]]
 excess[[3]] %>% spread(type, exc)
 
 excess <- 
-  obtain_excess(cd = "FRA", sx = "b", ag = "TOT", ymin = 2013)
+  obtain_excess(cd = "FRA", sx = "b", ag = "TOT", ymin = 2015)
 
 excess[[1]]
 excess[[2]]
