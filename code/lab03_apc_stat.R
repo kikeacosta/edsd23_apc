@@ -8,7 +8,7 @@ source("code/lab00_prep_session.R")
 
 hmd <- read_rds("data_input/hmd_dts_pop_v2.rds")
 
-# let's have a look at the mortality experience of the US females
+# let's have a look at the mortality experience of the US males since the 1950s
 cd <- "USA"
 sx <- "male"
 
@@ -30,11 +30,6 @@ unique(dt$year)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 1. Descriptive APC analysis ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Lexis surface of mortality change 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# offer a great view of the dynamics over time (APC)
-plot_change("USA", "male", amin, amax, pmin, pmax)
 
 # to simplify the analysis we reduce the categories by
 # grouping ages and periods in 5-year groups 
@@ -106,7 +101,17 @@ p4
 
 (p1+p2)/(p3+p4)
 
-# now, APC models...
+# ~~~~~~~~~~~~~~~~~~~~~~
+
+# mmmmmmm nice, but definitely much more informative a lexis surface of 
+# mortality change
+
+# Lexis surface of mortality change 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# offer a great view of the dynamics over time (APC)
+plot_change("USA", "male", amin, amax, pmin, pmax)
+
+# now, stat APC models...
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,6 +120,8 @@ p4
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 2. Statistical APC analysis ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# again using grouped data in 5-years for simplicity
 
 unique(dt2$P) %>% length()
 # age- and period-specific death rates
@@ -127,11 +134,9 @@ dt2 %>%
 
 # fitting a fully linear APC model
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 # age
 m_a <- glm(dts ~ A, offset = log(pop), family = poisson, data = dt2)
 summary(m_a)
-aic_a <- m_a$aic
 
 dt2 %>% 
   mutate(pred_a = predict(m_a) %>% exp() * 1e5/ pop) %>% 
@@ -144,7 +149,6 @@ dt2 %>%
 # age-period
 m_ap <- glm(dts ~ A + P, offset = log(pop), family = poisson, data = dt2)
 summary(m_ap)
-aic_ap <- m_ap$aic
 
 dt2 %>% 
   mutate(pred_a = predict(m_a) %>% exp() * 1e5/ pop) %>% 
@@ -159,7 +163,6 @@ dt2 %>%
 # age-period-cohort
 m_ac <- glm(dts ~ A + P + C, offset = log(pop), family = poisson, data = dt2)
 summary(m_ac)
-aic_ac <- m_ac$aic
 
 # the model didn't like it!!: it removes either P or C when fitting
 # because of perfect linear dependence between the three variables (A = P - C)
@@ -169,12 +172,6 @@ aic_ac <- m_ac$aic
 
 # Decomposing the APC model into linear and nonlinear effects
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# cross-sectional age death rates 
-h_apc <- glm(dts ~ factor(A) - 1  + I(P-1905) + factor(P) + factor(C), 
-             offset = log(pop), family = poisson, data = dt2)
-summary(h_apc)
-
 
 # Age model ====
 # ~~~~~~~~~~~~~~
@@ -310,10 +307,10 @@ get_drift(m_ap_lnr)
 # AdC: exp(coeffs) of age correspond to the death rates in the cohort of 
 # reference (longitudinal rates)
 
-# this is called the Age-drift model
+# this is called the **Age-drift model**
 
 
-# how similar are the nonlinear models?
+# now, how similar are the nonlinear models?
 p_ac_nlr+p_ap_nlr
 m_ap_nlr
 m_ac_nlr
@@ -325,32 +322,50 @@ m_ac_nlr
 # ~~~~~~~~~~~~~~
 
 # what happen if we just include everything?
-s_apc <- glm(dts ~ factor(A) + factor(P) + factor(C), 
+m_apc <- glm(dts ~ factor(A) + factor(P) + factor(C), 
              offset = log(pop), family = poisson, data = dt2 )
-s_apc
+m_apc
 
 # it seems to be working... what is the issue with this?
 # look at all the APC categories..., only the categories of references should 
 # be lacking of coefficients
+unique(dt2$A)
+unique(dt2$P)
+unique(dt2$C) %>% sort()
 
 # why does the last cohort have a NA as coefficient?
-# that is the way how R (other statistical software in general) treats 
+# that is the way how R (and most statistical programs in general) treats 
 # perfect multicollinearity: removes one variable for fitting the model
-# this is equivalent of constraining both the first and last cohort categories 
-# to be equal and zero
+# In this particular APC  context, what is happening here is equivalent to
+# constraining both the first and last cohort categories to be equal and zero
 
 # the first dimension (period or cohort) added to the equation will absorb the 
-# linear effect (drift), and the last one will be "detrended".  
+# whole linear effect (drift), and the last one will be "detrended" (by 
+# equalizing the first and last effect = 0).  
 
 
-# Holford approach 
-# ~~~~~~~~~~~~~~~~
+# Plotting the APC effects
+# first, we need to extract the coefficients...
+# no worries, I made a function for that
+coef_apc <- extract_coeffs(m_apc)$coeffs
+
+coef_apc %>% 
+  ggplot()+
+  geom_line(aes(value, effect))+
+  facet_wrap(~tdim, scales = "free")+
+  scale_y_log10()+
+  theme_bw()
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Holford approach for fitting APC
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Separate linear (drift) and nonlinear effects (APC), 
 # both period and cohort effects will be "detrended" 
 # the P and C reference are the first and last categories of each
 
-# a few clues for manipulating the formula in the model
-# the fitting will be the same but the interpretation of coeffcients will be
+# a few hints for manipulating the formula in the model
+# the fitting will be the same but the interpretation of coefficients will be
 # more intuitive:
 # adding a "-1" in the formula removes the intercept, and in this case, age 
 # coefficients can be interpreted directly as rates.
@@ -361,19 +376,21 @@ s_apc
 # relevel(factor(P), 10) | relevel(factor(P), "1950")
 
 # cross-sectional age death rates 
-h_apc <- glm(dts ~ factor(A) - 1  + I(P-1970) + factor(P) + factor(C), 
-              offset = log(pop), family = poisson, data = dt2)
-summary(h_apc)
+h_apc <- glm(dts ~ factor(A) - 1  + I(P-1950) + factor(P) + factor(C), 
+             offset = log(pop), family = poisson, data = dt2)
+h_apc
+
 
 # longitudinal age death rates 
-h_acp <- glm(dts ~ factor(A) - 1  + I(C-1950) + factor(C) + factor(P), 
+h_acp <- glm(dts ~ factor(A) - 1  + I(C-1870) + factor(C) + factor(P), 
               offset = log(pop), family = poisson, data = dt2)
-summary(h_acp)
+h_acp
 
 # *drift*
 extract_coeffs(h_apc)$drift
 extract_coeffs(h_acp)$drift
 
+# transforming the drift to interpretable units
 drift_h <- (round(extract_coeffs(h_apc)$drift, 3) - 1)*100
 
 # extract coefficients for plot
@@ -410,6 +427,8 @@ bind_rows(aic_a,
           aic_ap,
           aic_ac,
           aic_apc)
+
+# how much variation is explained by adding each temporal variable?
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -466,7 +485,6 @@ apc.plot(apc_c)
 # I made a function for plotting estimates from Carstensen models
 plot_carst(apc_c)
 
-
 # now longitudinal age-specific death rates 
 acp_c <- 
   apc.fit(dt_carst, 
@@ -477,19 +495,19 @@ acp_c <-
 
 plot_carst(acp_c)
 
-
 # the function is very versatile and has many ways to parameterize
 # for instance, not grouping ages and periods, 
 
 # age in single-year of period and age
 dt_carst_x1 <- 
   dt %>% 
+  # renaming variables for the Epi package
   select(D = dts,
          Y = pop,
          A = age,
          P = year)
 
-# adding all the drift to the cohort dimension
+# for instance, we can add all the drift to the cohort dimension
 acp_factor <- 
   apc.fit(dt_carst_x1, 
           model = "factor", 
@@ -500,8 +518,9 @@ acp_factor <-
 
 plot_carst(acp_factor)
 
-# we can fit splines for the nonlinear effects instead of categorical variables 
-# smoothed effects, more convenient for analyses of changes in the trend
+# or we can fit splines for the nonlinear effects instead of using categorical 
+# variables. We obtain smoothed APC effects, which are much more convenient 
+# for analyses of changes in the trend
 acp_splines <- 
   apc.fit(dt_carst_x1, 
           model = "bs", 

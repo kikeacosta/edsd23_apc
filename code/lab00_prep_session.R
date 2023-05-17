@@ -267,36 +267,6 @@ if (!file.exists("data_input/hfd_asfr.rds")) {
   
 }
 
-# # parity data
-# # ~~~~~~~~~~~
-# if (!file.exists("data_input/hfd_parity.rds")) {
-#   
-#   cts_par <- c("ESP", "SWE", "JPN", "ITA", "DEUTE", "DEUTW")
-#   
-#   hfd_par <- tibble()
-#   for(ct in cts_par){
-#     cat(paste0(ct, "\n"))
-#     
-#     chunk_p <- 
-#       readHFDweb(ct, "asfrRRbo", hmd_us, hmd_pw) %>%
-#       as_tibble() %>%
-#       mutate(Code = ct)
-#     
-#     hfd_par <- 
-#       hfd_par %>%
-#       bind_rows(chunk_p) %>% 
-#       unique()
-#   }
-#   hfd_par
-#   
-#   hfd_par2 <- 
-#     hfd_par %>% 
-#     select(-OpenInterval)
-#   
-#   write_rds(hfd_par2, "data_input/hfd_parity.rds")
-#   
-# }
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # redefining the Lexis shape specs ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -430,16 +400,18 @@ plot_change <- function(c, s, amin, amax, ymin, ymax){
                       breaks = cuts[c(1, 10, 20, 25, 30, 40, 50)], 
                       name = "Mortality\nchange %")+ 
     #adding contour lines when the slope is 0
-    geom_contour(aes(z = ch), breaks = 0, col="black", alpha=.7, size=.3)+ 
+    geom_contour(aes(z = ch), breaks = 0, col="black", 
+                 alpha=.7, linewidth = .3)+ 
     scale_x_continuous(expand = c(0,0), breaks = seq(ymin2, ymax2, 10)) +
     scale_y_continuous(expand = c(0,0), breaks = seq(amin2, amax2, 10))+
     # adding the grid of the Lexis diagram
     geom_vline(xintercept = seq(ymin2, ymax2, 10), linetype = "dashed", 
-               color = "grey30", size = .20, alpha = 0.8) +
+               color = "grey30", linewidth = .20, alpha = 0.8) +
     geom_hline(yintercept = seq(amin2, amax2, 10), linetype = "dashed", 
-               color = "grey30", size = .20, alpha = 0.8) +
+               color = "grey30", linewidth = .20, alpha = 0.8) +
     geom_abline(intercept = seq(-2020, -(ymin2-amax2), 10), slope = 1, 
-                linetype = "dashed", color = "grey30", size = .2, alpha = 0.8)+
+                linetype = "dashed", color = "grey30", 
+                linewidth = .2, alpha = 0.8)+
     labs(x="Period", y="Age")+
     # aesthetic details
     coord_equal() +
