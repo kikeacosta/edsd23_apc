@@ -326,6 +326,7 @@ m_apc <- glm(dts ~ factor(A) + factor(P) + factor(C),
              offset = log(pop), family = poisson, data = dt2 )
 m_apc
 
+
 # it seems to be working... what is the issue with this?
 # look at all the APC categories..., only the categories of references should 
 # be lacking of coefficients
@@ -534,10 +535,11 @@ acp_factor <-
           model = "factor", 
           dr.extr = "Y", 
           # all drift to the C
-          parm = "ACP", 
+          parm = "AdCP", 
           scale = 10^5)
 
-plot_carst(acp_factor)
+
+a <- plot_carst(acp_factor)
 
 # or we can fit splines for the nonlinear effects instead of using categorical 
 # variables. We obtain smoothed APC effects, which are much more convenient 
@@ -549,13 +551,13 @@ acp_splines <-
           # defining the amount of knots in each APC dimension for fitting the 
           # splines 
           # more knots means more flexibility
-          npar = c(A = 15, P = 10, C = 15),
+          npar = c(A = 10, P = 10, C = 15),
           dr.extr = "1", 
           parm = "AdCP", 
           scale = 10^5)
 
-plot_carst(acp_splines)
-
+b <- plot_carst(acp_splines)
+a/b
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
