@@ -543,6 +543,7 @@ plot_carst <-
       geom_ribbon(aes(Year, ymin = `2.5%`, ymax = `97.5%`), alpha = 0.3)+
       geom_line(aes(Year, RR))+
       scale_y_log10(breaks = c(0.2, 0.5, 0.7, 0.8, 1, 1.2, 1.5, 2, 4, 5))+
+      scale_x_continuous(breaks = seq(1800, 2020, 10))+
       theme_bw()+
       facet_grid(~dim, scales = "free_x", space = "free_x")+
       geom_hline(yintercept = 1, linetype = "dashed")

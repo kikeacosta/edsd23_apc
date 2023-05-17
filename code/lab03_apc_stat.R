@@ -471,6 +471,9 @@ dt_carst <-
   select(-mx, -C)
 
 
+
+# fitting the model
+# ~~~~~~~~~~~~~~~~~
 apc_c <- 
   apc.fit(dt_carst, 
           model = "factor", 
@@ -478,11 +481,29 @@ apc_c <-
           parm = "AdPC", 
           scale = 10^5)
 
-apc_c$Drift
-apc.plot(apc_c)
-# I don't like it
+# model, effects, drift, APC fitting evaluation, etc.
+apc_c
 
-# I made a function for plotting estimates from Carstensen models
+# just to compare, how different are these from our own models?
+bind_rows(aic_a,
+          aic_ad,
+          aic_ap,
+          aic_ac,
+          aic_apc)
+
+# same models!!, different parameterization
+
+
+# drift
+# ~~~~~
+apc_c$Drift
+
+# plotting
+# ~~~~~~~~
+apc.plot(apc_c)
+# I don't like the Epi function for plotting APC estimates
+# then, I made my own function for plotting the APC estimates from Carstensen
+# models
 plot_carst(apc_c)
 
 # now longitudinal age-specific death rates 
@@ -511,8 +532,8 @@ dt_carst_x1 <-
 acp_factor <- 
   apc.fit(dt_carst_x1, 
           model = "factor", 
-          npar = c(A=15, P=10, C=15),
           dr.extr = "Y", 
+          # all drift to the C
           parm = "ACP", 
           scale = 10^5)
 
@@ -525,7 +546,10 @@ acp_splines <-
   apc.fit(dt_carst_x1, 
           model = "bs", 
           ref.c = 1950,
-          npar = c(A=15, P=10, C=15),
+          # defining the amount of knots in each APC dimension for fitting the 
+          # splines 
+          # more knots means more flexibility
+          npar = c(A = 15, P = 10, C = 15),
           dr.extr = "1", 
           parm = "AdCP", 
           scale = 10^5)
