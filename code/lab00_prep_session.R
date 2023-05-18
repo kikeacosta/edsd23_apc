@@ -570,8 +570,7 @@ plot_carst <-
 
 
 
-cd = "FRA"; sx = "b"; ag = "TOT"; ymin = 2013
-
+cd = "CAN"; sx = "b"; ag = "TOT"; ymin = 2013
 
 obtain_excess <- 
   function(cd, sx, ag, ymin){
@@ -609,7 +608,7 @@ obtain_excess <-
     w_av <- 
       dt2 %>% 
       filter(year <= 2019) %>%
-      summarise(bsn = mean(dts)) %>% 
+      summarise(bsn = mean(dts, na.rm = TRUE)) %>% 
       pull(bsn)
     
     dt_w_av <- 
@@ -623,7 +622,7 @@ obtain_excess <-
       dt2 %>% 
       filter(year <= 2019) %>%
       group_by(week) %>% 
-      summarise(bsn = mean(dts)) %>% 
+      summarise(bsn = mean(dts, na.rm = TRUE)) %>% 
       ungroup()
     
     dt_ws_av <- 
@@ -773,6 +772,7 @@ obtain_excess <-
       geom_line(aes(date, dts), linewidth = 1)+
       geom_line(aes(date, bsn, col = type), linewidth = 1)+
       scale_color_manual(values = cols)+
+      labs(title = cd)+
       theme_bw()
     p_bsns
     
@@ -791,23 +791,13 @@ obtain_excess <-
       scale_color_manual(values = cols)+
       theme_bw()
     
-    # visualizing cumulative excess
-    excs_cum <- 
-      excs %>% 
-      group_by(type) %>% 
-      mutate(exc_cum = cumsum(exc)) %>% 
-      ggplot()+
-      # geom_line(aes(date, exc))+
-      geom_line(aes(date, exc_cum, col = type))+
-      theme_bw()
-    
     # obtaining annual excess
     yr_exc <- 
       excs %>% 
       filter(date >= "2020-03-15",
              date <= "2022-12-31") %>% 
       group_by(year, type) %>% 
-      summarise(exc = sum(exc)) %>% 
+      summarise(exc = sum(exc, na.rm = TRUE)) %>% 
       ungroup()
     
     tots <- 
@@ -834,10 +824,9 @@ obtain_excess <-
       geom_text(aes(x = "poisson_model", y = 0), label = paste0(t1, "\nreference"), vjust = -1)+
       geom_text(aes(x = "weekly_average", y = 0), label = paste0(t2, "\n", d2), vjust = -1)+
       geom_text(aes(x = "weekly_spc_average", y = 0), label = paste0(t3, "\n", d3), vjust = -1)+
-      labs(fill = "year")+
+      labs(fill = "year", title = cd)+
       coord_cartesian(expand = 0)+
       theme_bw()
-    
     
     
     out_f <- list(plot_bsns <- p_bsns,

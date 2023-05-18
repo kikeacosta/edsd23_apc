@@ -24,8 +24,8 @@ zip_files <- unzip("data_input/STMFinput.zip", list = TRUE)
 
 zip_files
 
-# lets look at Spanish data, total sex, all ages, since 2015
-cd <- "ESP"
+# lets look at US data, total sex, all ages, since 2015
+cd <- "USA"
 sx <- "b"
 ag <- "TOT"
 ymin <- 2015
@@ -56,7 +56,7 @@ dt2 %>%
   ggplot()+
   geom_line(aes(date, dts), linewidth = 1)+
   theme_bw()
-
+ggsave("figures/p0.png")
 
 
 # ######################################
@@ -73,7 +73,7 @@ dt2 %>%
 w_av <- 
   dt2 %>% 
   filter(year <= 2019) %>%
-  summarise(bsn = mean(dts)) %>% 
+  summarise(bsn = mean(dts, na.rm = TRUE)) %>% 
   pull(bsn)
 
 dt_w_av <- 
@@ -86,6 +86,7 @@ dt_w_av %>%
   geom_line(aes(date, bsn), linewidth = 1, col = cols[1])+
   geom_vline(xintercept = ymd("2020-03-15"), linetype = "dashed")+
   theme_bw()
+ggsave("figures/p1.png")
 
 # Week-specific average ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,7 +94,7 @@ ws_av <-
   dt2 %>% 
   filter(year <= 2019) %>%
   group_by(week) %>% 
-  summarise(bsn = mean(dts)) %>% 
+  summarise(bsn = mean(dts, na.rm = TRUE)) %>% 
   ungroup()
 
 dt_ws_av <- 
@@ -106,6 +107,7 @@ dt_ws_av %>%
   geom_line(aes(date, bsn), linewidth = 1, col = cols[2])+
   geom_vline(xintercept = ymd("2020-03-15"), linetype = "dashed")+
   theme_bw()
+ggsave("figures/p2.png")
 
 # it seems not bad at all!!
 
@@ -241,6 +243,8 @@ bsn %>%
   geom_line(aes(date, bsn), linewidth = 1, col = cols[3])+
   theme_bw()
 
+ggsave("figures/p3.png")
+
 # excess estimation
 exc <- 
   bsn %>% 
@@ -279,6 +283,9 @@ p_bsns <-
   theme_bw()
 p_bsns
 
+ggsave("figures/p4.png")
+
+
 excs <- 
   bsns %>% 
   mutate(exc = dts - bsn,
@@ -293,41 +300,31 @@ excs %>%
   geom_hline(yintercept = 0, linetype = "dashed")+
   scale_color_manual(values = cols)+
   theme_bw()
+ggsave("figures/p5.png")
 
 # visualizing cumulative excess
-excs_cum <- 
-  excs %>% 
+excs %>% 
+  drop_na(exc) %>% 
   group_by(type) %>% 
   mutate(exc_cum = cumsum(exc)) %>% 
   ggplot()+
   # geom_line(aes(date, exc))+
-  geom_line(aes(date, exc_cum, col = type))+
+  geom_line(aes(date, exc_cum, col = type), linewidth = 1)+
   theme_bw()
+ggsave("figures/p6.png")
+
 
 # obtaining annual excess
-# yr_exc <- 
-#   excs %>% 
-#   filter(date >= "2020-03-15",
-#          date <= "2022-12-31") %>% 
-#   group_by(year, type) %>% 
-#   summarise(exc = sum(exc)) %>% 
-#   ungroup() %>%
-#   spread(year, exc) %>% 
-#   mutate(total = `2020` + `2021` + `2022`)
-# 
-# yr_exc
-
 yr_exc <- 
   excs %>% 
   filter(date >= "2020-03-15",
          date <= "2022-12-31") %>% 
   group_by(year, type) %>% 
-  summarise(exc = sum(exc)) %>% 
+  summarise(exc = sum(exc, na.rm = TRUE)) %>% 
   ungroup()
 
 yr_exc %>% 
   spread(year, exc)
-
 
 tots <- 
   yr_exc %>% 
@@ -357,6 +354,7 @@ yr_exc %>%
   labs(fill = "year")+
   coord_cartesian(expand = 0)+
   theme_bw()
+ggsave("figures/p7.png")
 
 
 # Looking at the three years 2020-2022, estimates using averages double 
@@ -366,22 +364,20 @@ yr_exc %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
 # Assignment in class: ====
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
-# Estimate excess mortality in the US and France using the three methods and calculate 
+# Estimate excess mortality in Canada and Spain using the three methods and calculate 
 # the potential bias when using the average approach
 
-excess <- 
-  obtain_excess(cd = "USA", sx = "b", ag = "TOT", ymin = 2015)
+excess_can <- 
+  obtain_excess(cd = "CAN", sx = "b", ag = "TOT", ymin = 2015)
+excess_can[[1]]
+excess_can[[2]]
+excess_can[[3]] %>% spread(type, exc)
 
-excess[[1]]
-excess[[2]]
-excess[[3]] %>% spread(type, exc)
-
-excess <- 
-  obtain_excess(cd = "FRA", sx = "b", ag = "TOT", ymin = 2015)
-
-excess[[1]]
-excess[[2]]
-excess[[3]] %>% spread(type, exc)
+excess_esp <- 
+  obtain_excess(cd = "ESP", sx = "b", ag = "TOT", ymin = 2015)
+excess_esp[[1]]
+excess_esp[[2]]
+excess_esp[[3]] %>% spread(type, exc)
 
 # ok, that was quick...
 
