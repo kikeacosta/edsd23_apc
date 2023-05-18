@@ -272,8 +272,9 @@ bsns <-
             bsn %>% 
               select(year, week, date, dts, bsn) %>% 
               mutate(type = "poisson_model"))
-
+unique(bsns$type)
 # plotting the three baselines
+
 p_bsns <- 
   bsns %>% 
   ggplot()+
@@ -384,3 +385,8 @@ excess_esp[[3]] %>% spread(type, exc)
 # have fun in Euskal Erkidegoa!!
 # thanks for all, you are a great group, it was great to give this course :)
 
+excess_esp <- 
+  obtain_excess(cd = "LUX", sx = "b", ag = "TOT", ymin = 2015)
+excess_esp[[1]]
+excess_esp[[2]]
+excess_esp[[3]] %>% spread(type, exc)
