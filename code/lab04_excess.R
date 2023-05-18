@@ -221,9 +221,9 @@ gam_model <-
 # how does it look?
 summary(gam_model)
 
-# weekly slope (t) = 0.00018984
-# how much is that in 10 years?
-((1 + 0.00018984)^52)^10
+# weekly slope (t) = 0.00012142
+(exp(0.00012142)-1)*100
+
 
 # example for predicting estimates
 bsn_poi <- predict(gam_model, newdata = dt3, type = "response", se.fit = TRUE)
